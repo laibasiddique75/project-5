@@ -106,71 +106,51 @@ elif choice == "Login":
             st.success(f"✅ Welcome back, {username}!")
         else:
             st.session_state.failed_attempts += 1
-            st.error("❌ Invalid username or password.")
-            if st.session_state.failed_attempts >= 3:
-                st.session_state.lockout_time = time.time() + LOCKOUT_DURATION
-                st.warning("🚫 Too many failed attempts. Try again later.")
-                st.stop()
-
-    username = st.text_input("username")
-    password = st.text_input("password", type="password")
-
-    if st.button("Login"):
-        if username in stored_data and stored_data[username]["password"] == hash_password(password):
-            st.session_state.authenticated_user = username
-            st.session_state.failed_attempts = 0
-            st.success(f"Welcome back, {username}!")
-        else:
-            st.session_state.failed_attempts += 1
             remaining = 3 - st.session_state.failed_attempts
-            st.error(f" ❌ Invalid username or password. {remaining} attempts remaining.")
+            st.error(f"❌ Invalid username or password. {remaining} attempts remaining.")
 
             if st.session_state.failed_attempts >= 3:
                 st.session_state.lockout_time = time.time() + LOCKOUT_DURATION
-                st.error("🛑 ️Too many failed attempts.Locked for 60 seconds.")
+                st.error("🛑 Too many failed attempts. Locked for 60 seconds.")
                 st.stop()
 
-                # === data store section ===
-            elif choice == "Store Data":
-                if not st.session_state.authenticated_user:
-                    st.warning("🔐 please login first")
+# === Store Data ===
+elif choice == "Store Data":
+    if not st.session_state.authenticated_user:
+        st.warning("🔐 Please login first")
+    else:
+        st.subheader("📦 Store Encrypted Data")
+        data = st.text_area("Enter data to store")
+        passkey = st.text_input("Enter passkey", type="password")
+        if st.button("Encrypt and Save"):
+            if data and passkey:
+                encrypted = encrypt_text(data, passkey)
+                stored_data[st.session_state.authenticated_user]["data"].append(encrypted)
+                save_data(stored_data)
+                st.success("✅ Data encrypted and saved successfully!")
+            else:
+                st.error("⚠️ All fields are required.")
+
+# === Retrieve Data ===
+elif choice == "Retrieve Data":
+    if not st.session_state.authenticated_user:
+        st.warning("🔐 Please login first")
+    else:
+        st.subheader("🔍 Retrieve Data")
+        user_data = stored_data.get(st.session_state.authenticated_user, {}).get("data", [])
+        if not user_data:
+            st.info("ℹ️ No data found!")
+        else:
+            st.write("📦 Encrypted Data Entries:")
+            for i, item in enumerate(user_data):
+                st.code(item, language="text")
+
+            encrypted_input = st.text_area("Enter Encrypted Text")
+            passkey = st.text_input("Enter Passkey to Decrypt", type="password")
+
+            if st.button("Decrypt"):
+                result = decrypt_text(encrypted_input, passkey)
+                if result:
+                    st.success(f"✅ Decrypted: {result}")
                 else:
-                    st.subheader(" 📦 Store Encrypted Data")
-                    data = st.text_area("Enter data to store")
-                    passkey = st.text_input("Enter passkey", type="password")
-                    if st.button("Encrypt and save"):
-                        if data and passkey:
-                            encrypted = encrypt_text(data, passkey)
-                            stored_data[st.session_state.authenticated_user]["data"].append(encrypted)
-                            save_data(stored_data)
-                            st.success(" ✅ Data encrypted and save Successfully!")
-                        else:
-                            st.error("All fields are required to fill.")
-
-                            # === data retrieve data section ===
-            elif choice == "Retrieve Data":
-                if not st.session_state.authenticated_user:
-                    st.warning(" 🔓 Please login first")
-                else:
-                    st.subheader("🔍 Retrieve Data")
-                user_data = stored_data.get(st.session_state.authenticated_user , {}).get("data", [])
-                if not user_data:
-                    st.info("No Data Found!")
-                else:
-                    st.write("Encrypted Data Enteries:")
-                    for i , item in enumerate(user_data):
-                        st.code(item ,language="text")
-
-                    encrypted_input = st.text_area("Enter Encrypted Text")
-                    passkey = st.text_input("Enter Passkey T Decrypt" , type="password")
-
-                    if st.button("Decrypt"):
-                        result = decrypt_text(encrypted_input , passkey)
-                        if result:
-                            st.success(f" ✅ Decrypted : {result}")
-                        else:
-                            st.error(" ❌ Incorrect passkey or corruypted data")
-
-                
-
-    
+                    st.error("❌ Incorrect passkey or corrupted data")
